@@ -11,5 +11,6 @@ services:
       - WEBHOOK_PORT=${WEBHOOK_PORT}
       - WEBHOOK_HOST=${WEBHOOK_HOST}
       - ENVIRONMENT=${ENVIRONMENT}
+      - KAFKA_TOPICS=${KAFKA_TOPICS}
     env_file:
       - .env

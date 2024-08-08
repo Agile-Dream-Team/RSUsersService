@@ -1,4 +1,5 @@
-from fastapi import Request
+from fastapi import Request, HTTPException, Header
+from functools import wraps
 from app.exceptions.custom_exceptions import BadRequestException
 from enum import Enum
 
@@ -7,6 +8,11 @@ async def validate_webhook(request: Request):
     if not request.json():
         raise BadRequestException(detail="Not a valid request")
     return await request.json()
+
+
+async def validate_x_authorization_header(x_authorization: str = Header(...)):
+    if x_authorization != "test":
+        raise HTTPException(status_code=401, detail="Invalid x-Authorization header")
 
 
 class EventType(str, Enum):

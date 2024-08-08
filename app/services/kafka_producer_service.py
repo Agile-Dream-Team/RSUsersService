@@ -1,19 +1,26 @@
-# app/services/kafka_producer_service.py
-from app.config.kafka import KafkaConfig
-from app.dto.kafka_out_dto import KafkaOutDTO
-from app.dto.webhook_in_dto import WebhookDTO
+import logging
+from ..config.kafka_manager import KafkaManager
+from ..dto.kafka_out_dto import KafkaOutDTO
+from ..dto.webhook_in_dto import WebhookDTO
+from confluent_kafka import KafkaException
 
 
 class KafkaProducerService:
-    def __init__(self, kafka_config: KafkaConfig):
-        self.producer = kafka_config.create_producer()
-        self.topic = kafka_config.topic
+    def __init__(self, kafka_manager: KafkaManager):
+        self.producer = kafka_manager.producer
+        self.topic = kafka_manager.topics
+        logging.basicConfig(level=logging.INFO)
 
-    def send_to_kafka(self, webhook_dto: WebhookDTO):
-        kafka_out_dto = KafkaOutDTO(
-            event=webhook_dto.event,
-            data=webhook_dto.data,
-            source="webhook"
-        )
-        self.producer.produce(self.topic, key=kafka_out_dto.event, value=kafka_out_dto.json())
-        self.producer.flush()
+    def process_webhook_to_kafka(self, webhook_dto: WebhookDTO):
+        try:
+            kafka_out_dto = KafkaOutDTO(
+                data=webhook_dto.data.dict(),
+                source="webhook"
+            )
+            logging.info(f"Sending message to Kafka: {kafka_out_dto.json()}")
+
+            self.producer.produce(webhook_dto.event, value=kafka_out_dto.json())
+            self.producer.flush()
+        except KafkaException as e:
+            logging.error(f"Failed to send message: {e}")
+            raise
