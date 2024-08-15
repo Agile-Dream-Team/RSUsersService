@@ -22,13 +22,13 @@ Build with:
 Clone the project
 
 ```bash
-  git clone git@github.com:fernandogdaza/middlewareService.git
+  git clone git@github.com:Agile-Dream-Team/RSWarehouseService.git
 ```
 
 Go to the project directory
 
 ```bash
-  cd middlewareService
+  cd RSWarehouseService
 ```
 Create virtual environment
 ```bash
