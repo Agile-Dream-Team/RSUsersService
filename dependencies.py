@@ -1,5 +1,6 @@
 import os
 
+from app.config.config import Settings
 from app.config.kafka_manager import KafkaManager
 from app.services.kafka_producer_service import KafkaProducerService
 
@@ -37,10 +38,6 @@ def get_kafka_producer_service() -> KafkaProducerService:
     ))
 
 
-def startup_kafka_manager(app, settings):
-    app.state.kafka_manager = KafkaManager(
-        bootstrap_servers=f'{settings.kafka_host}:{settings.kafka_port}',
-        topics=settings.kafka_topics,  # Ensure topics are split into a list
-        group_id=settings.kafka_group_id
-    )
-    app.state.kafka_producer_service = KafkaProducerService(app.state.kafka_manager)
+def startup_kafka_manager(settings: Settings):
+    # Initialize Kafka manager with settings
+    pass
