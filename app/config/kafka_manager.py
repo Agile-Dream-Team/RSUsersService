@@ -77,3 +77,4 @@ class KafkaManager:
         except KafkaException as e:
             logging.error(f"Failed to receive health check ping: {e}")
         return False
+

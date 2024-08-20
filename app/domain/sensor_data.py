@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, Integer, String
+from sqlalchemy import Column, String, Float, DateTime, INT
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -7,13 +7,21 @@ Base = declarative_base()
 class SensorData(Base):
     __tablename__ = 'sensor_data'
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    temperature = Column(Integer, nullable=True)
-    humidity = Column(Integer, nullable=True)
-    electrical_conductivity = Column(Integer, nullable=True)
-    co2 = Column(Integer, nullable=True)
-    camera_data = Column(String, nullable=True)
-    client_id = Column(BigInteger, nullable=False)
-    uuid = Column(String, nullable=False)
-    event = Column(String, nullable=False)
-    datetime = Column(String, nullable=False)
+    uuid = Column(String, primary_key=True)
+    temperature = Column(INT)
+    humidity = Column(INT)
+    electrical_conductivity = Column(INT)
+    co2 = Column(INT)
+    camera_data = Column(String)
+    datetime = Column(DateTime)
+
+    def to_dict(self):
+        return {
+            'uuid': self.uuid,
+            'temperature': self.temperature,
+            'humidity': self.humidity,
+            'electrical_conductivity': self.electrical_conductivity,
+            'co2': self.co2,
+            'camera_data': self.camera_data,
+            'date_time': self.datetime.isoformat() if self.datetime else None
+        }
