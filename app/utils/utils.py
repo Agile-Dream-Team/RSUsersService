@@ -1,8 +1,7 @@
 from enum import Enum
 
 
-class EventType(str, Enum):
-    NORMAL = "normal"
+class TopicEvent(str, Enum):
     HIGH_TEMP = "high_temp"
     LOW_TEMP = "low_temp"
     HIGH_HUMIDITY = "high_humidity"
@@ -15,14 +14,15 @@ class EventType(str, Enum):
     UNKNOWN = "unknown"
 
 
-class EventActionConsume(str, Enum):
-    CREATE = "create"
+class TopicActionRequest(str, Enum):
+    SAVE = "save"
     UPDATE = "update"
     DELETE = "delete"
     GET_ALL = "get_all"
     GET_BY_ID = "get_by_id"
 
 
-class EventActionProduce(str, Enum):
-    GET_ALL_PRODUCE = "get_all_produce"
-    GET_BY_ID_PRODUCE = "get_by_id_produce"
+class TopicActionResponse(str, Enum):
+    SAVE_RESPONSE = "save_response"
+    GET_ALL_RESPONSE = "get_all_response"
+    GET_BY_ID_RESPONSE = "get_by_id_response"

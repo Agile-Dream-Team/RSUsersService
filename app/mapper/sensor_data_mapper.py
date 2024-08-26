@@ -1,12 +1,17 @@
+import json
 from app.dto.kafka_in_dto import KafkaInDTO
 from app.domain.sensor_data import SensorData
 
-def map_dto_to_entity(kafka_in_dto: KafkaInDTO) -> SensorData:
+
+def dto_to_entity(kafka_in_dto: str) -> SensorData:
     def safe_int_conversion(value: str) -> int:
         try:
             return int(float(value))
         except ValueError:
-            print(ValueError) # or handle the error as needed
+            print(ValueError)  # or handle the error as needed
+
+    # Parse the JSON string to KafkaInDTO
+    kafka_in_dto = KafkaInDTO(**json.loads(kafka_in_dto))
 
     return SensorData(
         temperature=safe_int_conversion(kafka_in_dto.data.temperature),

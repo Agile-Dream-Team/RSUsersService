@@ -1,145 +1,102 @@
 import logging
-import psycopg2
-from confluent_kafka import Consumer, KafkaException, KafkaError
-import json
-from app.dto.kafka_in_dto import KafkaInDTO, KafkaGetAllDTO, KafkaGetByIdDTO
-from pydantic import ValidationError
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
+
+import uvicorn
+from fastapi import FastAPI, status
+from pydantic import BaseModel, ValidationError
+
 from app.config.config import Settings
+from kafka_rs.client import KafkaClient
 from app.services.kafka_consumer_service import KafkaConsumerService
-from app.utils.utils import EventActionConsume
-from dependencies import startup_kafka_manager
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-from app.domain.sensor_data import Base
 
 
 def configure_logging():
     logging.basicConfig(level=logging.INFO)
 
 
-class Database:
-    def __init__(self, settings: Settings):
-        try:
-            self.connection = psycopg2.connect(
-                dbname=settings.db_name,
-                user=settings.db_user,
-                password=settings.db_password,
-                host=settings.db_host,
-                port=settings.db_port
-            )
-            self.cursor = self.connection.cursor()
-            logging.info("Postgres connection established successfully.")
-        except psycopg2.Error as e:
-            logging.error(f"Failed to connect to Postgres: {e}")
-            raise
+configure_logging()
 
-    def execute_query(self, query: str):
-        self.cursor.execute(query)
-        self.connection.commit()
+app_settings = Settings()
+app = FastAPI()
 
-    def close(self):
-        self.cursor.close()
-        self.connection.close()
+# Initialize KafkaClient using the singleton pattern
+kafka_client = KafkaClient.instance(app_settings.kafka_bootstrap_servers, app_settings.kafka_group_id)
 
 
-def kafka_topic(topic_name):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            instance = args[0]
-            instance.consumer.subscribe([topic_name])
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
+# Dependency to get the KafkaConsumerService instance
+def get_kafka_service():
+    return KafkaConsumerService(Settings(), kafka_client)
 
 
-def setup_database(settings):
-    engine = create_engine(
-        f"postgresql://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    return Session()
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
+    try:
+        local_settings = Settings()
+    except ValidationError as e:
+        logging.error(f"Environment variable validation error: {e}")
+        raise
+
+    existing_topics = kafka_client.list_topics()
+    logging.info(f"Creating Kafka topics: {local_settings.kafka_topics}")
+    for topic in local_settings.kafka_topics:
+        if topic not in existing_topics:
+            await kafka_client.create_topic(topic)  # Assuming create_topic is async
+        else:
+            logging.info(f"Topic '{topic}' already exists.")
+
+    kafka_service = KafkaConsumerService(local_settings, kafka_client)
+    logging.info("KafkaConsumerService initialized successfully.")
+
+    # Store the service in the app's state for global access
+    fastapi_app.state.kafka_service = kafka_service
+
+    try:
+        yield  # Yield nothing or a suitable dictionary if needed
+    finally:
+        # Perform any cleanup if necessary
+        logging.info("Cleaning up resources")
 
 
-class KafkaConsumer:
-    def __init__(self, settings: Settings):
-        self.consumer = Consumer({
-            'bootstrap.servers': settings.kafka_bootstrap_servers,
-            'group.id': settings.kafka_group_id,
-            'auto.offset.reset': 'earliest'
-        })
-        self.db_session = setup_database(settings)
-        self.consumer_service = KafkaConsumerService(self.db_session, settings.kafka_bootstrap_servers)
+# Ensure the lifespan context is properly set
+app.router.lifespan_context = lifespan
 
-    def consume_message(self, topic_name):
-        while True:
-            try:
-                msg = self.consumer.poll(timeout=1.0)
-                if msg is None:
-                    continue
-                if msg.error():
-                    if msg.error().code() == KafkaError._PARTITION_EOF:
-                        continue
-                    else:
-                        raise KafkaException(msg.error())
-                logging.info(f"Consumed message from topic {msg.topic()}: {msg.value().decode('utf-8')}")
 
-                # Parse the message into the appropriate DTO
-                try:
-                    message_data = json.loads(msg.value().decode('utf-8'))
-                    event_type = message_data.get('event')
+class HealthCheck(BaseModel):
+    msg: str = "Hello world"
 
-                    if event_type == EventActionConsume.CREATE:
-                        kafka_in_dto = KafkaInDTO(**message_data)
-                    elif event_type == EventActionConsume.GET_ALL:
-                        kafka_in_dto = KafkaGetAllDTO(**message_data)
-                    elif event_type == EventActionConsume.GET_BY_ID:
-                        kafka_in_dto = KafkaGetByIdDTO(**message_data)
-                    else:
-                        logging.warning(f"Unhandled event type: {event_type}")
-                        continue
 
-                    # Process the message using KafkaConsumerService
-                    self.consumer_service.process_message(kafka_in_dto)
-                except (json.JSONDecodeError, ValidationError) as e:
-                    logging.error(f"Failed to parse message: {e}")
-            except Exception as e:
-                logging.error(f"Error in consume_message for topic {topic_name}: {e}")
+@app.get("/", response_model=HealthCheck, status_code=status.HTTP_200_OK)
+async def get_health() -> HealthCheck:
+    logging.info("Health check endpoint called")
+    return HealthCheck()
 
-    @kafka_topic('get_all')
-    def consume_get_all_messages(self):
-        self.consume_message('get_all')
 
-    @kafka_topic('create')
-    def consume_create_messages(self):
-        self.consume_message('create')
+@kafka_client.topic('get_all')
+def consume_message_get_all(msg):
+    try:
+        data = msg.value().decode('utf-8')
+        logging.info(f"Consumed message in get_all: {data}")
+        kafka_service = get_kafka_service()
+        kafka_service.get_all_service(data)
+    except Exception as e:
+        logging.error(f"Error processing message in get_all: {e}")
 
-class MainApp:
-    def __init__(self):
-        self.app_settings = Settings()
-        configure_logging()
 
-    @contextmanager
-    def lifespan(self):
-        try:
-            local_settings = Settings()
-        except ValidationError as e:
-            logging.error(f"Environment variable validation error: {e}")
-            raise
-
-        startup_kafka_manager(local_settings)
-        kafka_manager = KafkaConsumer(local_settings)
-        kafka_manager.consume_get_all_messages()
-        yield
-
-    def run(self):
-        logging.info("Starting application")
-        with self.lifespan():
-            pass
+@kafka_client.topic('save')
+def consume_message_save(msg):
+    try:
+        data = msg.value().decode('utf-8')
+        logging.info(f"Consumed message in save: {data}")
+        kafka_service = get_kafka_service()
+        kafka_service.save_service(data)
+    except Exception as e:
+        logging.error(f"Error processing message in save: {e}")
 
 
 if __name__ == "__main__":
-    app_instance = MainApp()
-    app_instance.run()
+    uvicorn.run(
+        "main:app",
+        host=app_settings.webhook_host,
+        port=app_settings.webhook_port,
+        reload=app_settings.environment == 'dev'
+    )

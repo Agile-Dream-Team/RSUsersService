@@ -1,8 +1,6 @@
 import os
 
 from app.config.config import Settings
-from app.config.kafka_manager import KafkaManager
-from app.services.kafka_producer_service import KafkaProducerService
 
 # dependencies.py
 import jwt
@@ -29,15 +27,3 @@ async def has_access(credentials: HTTPAuthorizationCredentials = Depends(securit
             status_code=401,
             detail=str(e))
 
-
-def get_kafka_producer_service() -> KafkaProducerService:
-    return KafkaProducerService(KafkaManager(
-        bootstrap_servers=f'{os.getenv("KAFKA_HOST")}:{os.getenv("KAFKA_PORT")}',
-        topics=os.getenv('KAFKA_TOPIC'),
-        group_id=os.getenv('KAFKA_GROUP_ID')
-    ))
-
-
-def startup_kafka_manager(settings: Settings):
-    # Initialize Kafka manager with settings
-    pass
