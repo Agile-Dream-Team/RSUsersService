@@ -1,3 +1,4 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 
@@ -6,6 +7,7 @@ from fastapi import FastAPI, status
 from pydantic import BaseModel, ValidationError
 
 from app.config.config import Settings
+from app.utils.utils import TopicActionResponse
 from kafka_rs.client import KafkaClient
 from app.services.kafka_consumer_service import KafkaConsumerService
 
@@ -90,6 +92,9 @@ def consume_message_save(msg):
         kafka_service = get_kafka_service()
         kafka_service.save_service(data)
     except Exception as e:
+        error = {"status_code": 400, "error": str(e)}
+        sensor_data_json = json.dumps(error)
+        kafka_client.send_message(TopicActionResponse.SAVE_RESPONSE, sensor_data_json)
         logging.error(f"Error processing message in save: {e}")
 
 
