@@ -81,6 +81,9 @@ def consume_message_get_all(msg):
         kafka_service = get_kafka_service()
         kafka_service.get_all_service(data)
     except Exception as e:
+        error = {"status_code": 400, "error": str(e)}
+        sensor_data_json = json.dumps(error)
+        kafka_client.send_message(TopicActionResponse.GET_ALL_RESPONSE, sensor_data_json)
         logging.error(f"Error processing message in get_all: {e}")
 
 

@@ -29,6 +29,7 @@ def dto_to_entity(kafka_in_dto: str) -> SensorData:
         movement=kafka_in_dto.data.movement,
         air_flow=safe_float_conversion(kafka_in_dto.data.air_flow),
         weight=safe_float_conversion(kafka_in_dto.data.weight),
+        light_intensity=safe_float_conversion(kafka_in_dto.data.light_intensity),
         client_id=safe_float_conversion(kafka_in_dto.client_id),
         datetime=datetime_obj,
         uuid=kafka_in_dto.uuid,

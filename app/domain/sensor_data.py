@@ -15,6 +15,7 @@ class SensorData(Base):
     movement = Column(Boolean)
     air_flow = Column(FLOAT)
     weight = Column(FLOAT)
+    light_intensity = Column(FLOAT)
     uuid = Column(String, nullable=False)
     datetime = Column(TIMESTAMP)
     client_id = Column(FLOAT, nullable=False)
