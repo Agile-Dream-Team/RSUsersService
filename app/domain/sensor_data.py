@@ -1,7 +1,6 @@
-from sqlalchemy import Column, String, Boolean, TIMESTAMP, BigInteger, INT, Sequence, FLOAT
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from sqlalchemy import Column, String, Boolean, TIMESTAMP, BigInteger, Sequence, FLOAT
+from sqlalchemy.orm import relationship
+from .base import Base
 
 
 class SensorData(Base):
@@ -18,8 +17,10 @@ class SensorData(Base):
     light_intensity = Column(FLOAT)
     uuid = Column(String, nullable=False)
     datetime = Column(TIMESTAMP)
-    client_id = Column(FLOAT, nullable=False)
-    event = Column(String)
+    bucket_id = Column(BigInteger, nullable=False)
+    event_id = Column(BigInteger, nullable=False)
+
+    cameras = relationship("Camera", back_populates="sensor_data")
 
     def to_dict(self):
         return {
@@ -33,6 +34,6 @@ class SensorData(Base):
             'weight': self.weight,
             'uuid': self.uuid,
             'datetime': self.datetime.strftime('%Y-%m-%d %H:%M:%S'),
-            'client_id': self.client_id,
-            'event': self.event
+            'bucket_id': self.bucket_id,
+            'event_id': self.event_id
         }

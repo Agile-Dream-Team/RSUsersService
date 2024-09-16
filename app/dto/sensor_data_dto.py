@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional, Union
-from app.utils.utils import TopicEvent, TopicActionRequest
+from typing import Optional
+from app.utils.utils import TopicActionRequest
 
 
 class KafkaInDataDTO(BaseModel):
@@ -16,10 +16,10 @@ class KafkaInDataDTO(BaseModel):
 
 
 class KafkaInDTO(BaseModel):
-    event: Union[TopicEvent, TopicActionRequest]
+    event_id: str
     data: KafkaInDataDTO
     date_time: str
-    client_id: str
+    bucket_id: str
     uuid: str
 
 
@@ -28,5 +28,5 @@ class KafkaGetAllDTO(BaseModel):
 
 
 class KafkaGetByIdDTO(BaseModel):
-    event: TopicActionRequest
-    client_id: str
+    event_id: str
+    bucket_id: str
