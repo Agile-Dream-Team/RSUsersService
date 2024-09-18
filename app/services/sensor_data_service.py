@@ -4,7 +4,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.exceptions.custom_exceptions import BadRequestException
 from app.mapper.sensor_data_mapper import dto_to_entity
 from app.repository.sensor_data_repository import SensorDataRepository
-from kafka_rs.client import KafkaClient
+from RSKafkaWrapper.client import KafkaClient
+from RSErrorHandler.ErrorHandler import RSKafkaException
 
 
 class SensorDataService:
@@ -21,9 +22,8 @@ class SensorDataService:
             sensor_data_json = json.dumps([data.to_dict() for data in sensor_data])
             self.kafka_client.send_message("get_all_sensor_data_response", sensor_data_json)
         except SQLAlchemyError as e:
-            logging.error(f"Database error processing message: {e}")
             self.db_session.rollback()
-            raise BadRequestException(f"Failed to process message: {e}")
+            raise RSKafkaException(f"Database error: {e}", self.kafka_client, "get_all_sensor_data_response")
         finally:
             self.db_session.close()
 
@@ -39,9 +39,7 @@ class SensorDataService:
             return sensor_data
         except SQLAlchemyError as e:
             self.db_session.rollback()
-            error = {"status_code": 400, "error": str(e)}
-            sensor_data_json = json.dumps(error)
-            self.kafka_client.send_message("sensor_data_response", sensor_data_json)
-            raise BadRequestException(f"Failed to process message: {e}")
+            raise RSKafkaException(f"Database error: {e}", self.kafka_client, "sensor_data_response")
+
         finally:
             self.db_session.close()
