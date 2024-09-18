@@ -6,11 +6,12 @@ import uvicorn
 from fastapi import FastAPI, status
 from pydantic import BaseModel, ValidationError
 
+from RSErrorHandler.ErrorHandler import RSKafkaException
 from app.config.config import Settings
 from app.config.database import setup_database
 from app.services.camera_service import CameraService
 from app.services.sensor_data_service import SensorDataService
-from kafka_rs.client import KafkaClient
+from RSKafkaWrapper.client import KafkaClient
 
 
 def configure_logging():
@@ -116,10 +117,8 @@ def consume_message_save_camera(msg):
         kafka_service_camera = get_kafka_service_camera()
         kafka_service_camera.save_camera_service(data)
     except Exception as e:
-        error = {"status_code": 400, "error": str(e)}
-        camera_json = json.dumps(error)
-        kafka_client.send_message("camera_response", camera_json)
         logging.error(f"Error processing message in camera: {e}")
+        raise RSKafkaException(f"Exception: {e}", kafka_client, "camera_response")
 
 
 @kafka_client.topic('get_all_camera')
@@ -130,10 +129,8 @@ def consume_message_get_all_camera(msg):
         kafka_service_image = get_kafka_service_camera()
         kafka_service_image.get_all_camera_service(data)
     except Exception as e:
-        error = {"status_code": 400, "error": str(e)}
-        camera_json = json.dumps(error)
-        kafka_client.send_message("get_all_camera_response", camera_json)
         logging.error(f"Error processing message in get_all_camera: {e}")
+        raise RSKafkaException(f"Exception: {e}", kafka_client, "get_all_camera_response")
 
 
 if __name__ == "__main__":

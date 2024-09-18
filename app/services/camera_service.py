@@ -1,10 +1,12 @@
 import json
 import logging
 from sqlalchemy.exc import SQLAlchemyError
+
+from RSErrorHandler.ErrorHandler import RSKafkaException
 from app.exceptions.custom_exceptions import BadRequestException
 from app.mapper.camera_mapper import dto_to_entity
 from app.repository.camera_repository import CameraRepository
-from kafka_rs.client import KafkaClient
+from RSKafkaWrapper.client import KafkaClient
 
 
 class CameraService:
@@ -21,9 +23,9 @@ class CameraService:
             camera_json = json.dumps([data.to_dict() for data in camera])
             self.kafka_client.send_message("get_all_camera_response", camera_json)
         except SQLAlchemyError as e:
-            logging.error(f"Database error processing message: {e}")
             self.db_session.rollback()
-            raise BadRequestException(f"Failed to process message: {e}")
+            raise RSKafkaException(f"Database error: {e}", self.kafka_client, "get_all_camera_response")
+
         finally:
             self.db_session.close()
 
@@ -39,9 +41,7 @@ class CameraService:
             return image
         except SQLAlchemyError as e:
             self.db_session.rollback()
-            error = {"status_code": 400, "error": str(e)}
-            sensor_data_json = json.dumps(error)
-            self.kafka_client.send_message("camera_response", sensor_data_json)
-            raise BadRequestException(f"Failed to process message: {e}")
+            raise RSKafkaException(f"Database error: {e}", self.kafka_client, "camera_response")
+
         finally:
             self.db_session.close()
