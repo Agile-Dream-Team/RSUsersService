@@ -19,8 +19,11 @@ class SensorDataService:
             logging.info(f"Processing message: {kafka_in_dto}")
             sensor_data = self.sensor_data_repository.get_all()
             logging.info(f"Retrieved sensor data: {sensor_data}")
-            sensor_data_json = json.dumps([data.to_dict() for data in sensor_data])
-            self.kafka_client.send_message("get_all_sensor_data_response", sensor_data_json)
+            sensor_data_json = [data.to_dict() for data in sensor_data]
+
+            sensor_data_dict = {"sensor_data": sensor_data_json}
+
+            self.kafka_client.send_message("get_all_sensor_data_response", sensor_data_dict)
         except SQLAlchemyError as e:
             self.db_session.rollback()
             raise RSKafkaException(f"Database error: {e}", self.kafka_client, "get_all_sensor_data_response")
@@ -33,13 +36,26 @@ class SensorDataService:
             sensor_data = dto_to_entity(kafka_in_dto)
             self.sensor_data_repository.save(sensor_data)
             sensor_data_dict = sensor_data.to_dict()
-            sensor_data_dict["status_code"] = 200
-            sensor_data_json = json.dumps(sensor_data_dict)
-            self.kafka_client.send_message("sensor_data_response", sensor_data_json)
+            self.kafka_client.send_message("sensor_data_response", sensor_data_dict)
             return sensor_data
         except SQLAlchemyError as e:
             self.db_session.rollback()
             raise RSKafkaException(f"Database error: {e}", self.kafka_client, "sensor_data_response")
+
+        finally:
+            self.db_session.close()
+
+    def get_by_id_sensor_data_service(self, kafka_in_dto):
+        try:
+            record_id = kafka_in_dto['id']
+
+            sensor_data = self.sensor_data_repository.get_by_id(record_id)
+            logging.info(f"Retrieved sensor data: {sensor_data}")
+            sensor_data_dict = sensor_data.to_dict() if sensor_data else {}
+            self.kafka_client.send_message("get_by_id_sensor_data_response", sensor_data_dict)
+        except SQLAlchemyError as e:
+            self.db_session.rollback()
+            raise RSKafkaException(f"Database error: {e}", self.kafka_client, "get_by_id_sensor_data_response")
 
         finally:
             self.db_session.close()

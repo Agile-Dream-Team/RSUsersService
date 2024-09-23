@@ -17,8 +17,8 @@ class CameraRepository:
     def get_all(self):
         return self.db_session.query(Camera).all()
 
-    def get_by_id(self, uuid):
-        pass
+    def get_by_id(self, camera_id):
+        return self.db_session.query(Camera).filter(Camera.id == camera_id).first()
 
     def delete(self, image):
         pass

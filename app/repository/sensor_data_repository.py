@@ -17,8 +17,8 @@ class SensorDataRepository:
     def get_all(self):
         return self.db_session.query(SensorData).all()
 
-    def get_by_id(self, uuid):
-        pass
+    def get_by_id(self, sensor_data_id):
+        return self.db_session.query(SensorData).filter(SensorData.id == sensor_data_id).first()
 
     def delete(self, sensor_data):
         pass

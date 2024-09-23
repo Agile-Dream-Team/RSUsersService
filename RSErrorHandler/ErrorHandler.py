@@ -11,5 +11,5 @@ class RSKafkaException(Exception):
         self.send_error_to_kafka()
 
     def send_error_to_kafka(self):
-        error_message = json.dumps({"status_code": 400, "error": self.message})
+        error_message = {"status_code": 400, "error": self.message}
         self.kafka_client.send_message(self.topic, error_message)

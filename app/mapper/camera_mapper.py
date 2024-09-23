@@ -3,10 +3,10 @@ from app.dto.camera_dto import KafkaInDTO
 from app.domain.camera import Camera
 
 
-def dto_to_entity(kafka_in_dto: str) -> Camera:
+def dto_to_entity(kafka_in_dto) -> Camera:
     try:
         # Parse the JSON string to KafkaInDTO
-        kafka_in_dto = KafkaInDTO(**json.loads(kafka_in_dto))
+        kafka_in_dto = KafkaInDTO(**kafka_in_dto)
 
         return Camera(
             image_b64=kafka_in_dto.image_b64,
