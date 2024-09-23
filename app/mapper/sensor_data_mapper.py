@@ -4,7 +4,7 @@ from app.dto.sensor_data_dto import KafkaInDTO
 from app.domain.sensor_data import SensorData
 
 
-def dto_to_entity(kafka_in_dto: str) -> SensorData:
+def dto_to_entity(kafka_in_dto) -> SensorData:
     def safe_float_conversion(value: str) -> float:
         try:
             print(f'Value: {value}')
@@ -16,7 +16,7 @@ def dto_to_entity(kafka_in_dto: str) -> SensorData:
 
     try:
         # Parse the JSON string to KafkaInDTO
-        kafka_in_dto = KafkaInDTO(**json.loads(kafka_in_dto))
+        kafka_in_dto = KafkaInDTO(**kafka_in_dto)
 
         # Convert datetime string to datetime object
         datetime_obj = datetime.strptime(kafka_in_dto.date_time, '%Y-%m-%d %H:%M:%S')
