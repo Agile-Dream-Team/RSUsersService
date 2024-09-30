@@ -18,7 +18,6 @@ class SensorDataService:
         try:
             logging.info(f"Processing message: {kafka_in_dto}")
             sensor_data = self.sensor_data_repository.get_all()
-            logging.info(f"Retrieved sensor data: {sensor_data}")
             sensor_data_json = [data.to_dict() for data in sensor_data]
 
             sensor_data_dict = {"sensor_data": sensor_data_json}
