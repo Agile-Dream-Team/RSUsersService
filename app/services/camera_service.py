@@ -35,8 +35,9 @@ class CameraService:
             logging.info(f"Processing message: {kafka_in_dto}")
             image = dto_to_entity(kafka_in_dto)
             self.camera_repository.save(image)
-            sensor_data_dict = image.to_dict()
-            self.kafka_client.send_message("camera_response", sensor_data_dict)
+            camera_dict = image.to_dict()
+            camera_dict.update({"status_code": 200})
+            self.kafka_client.send_message("camera_response", camera_dict)
             return image
         except SQLAlchemyError as e:
             self.db_session.rollback()

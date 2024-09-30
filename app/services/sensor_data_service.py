@@ -36,6 +36,7 @@ class SensorDataService:
             sensor_data = dto_to_entity(kafka_in_dto)
             self.sensor_data_repository.save(sensor_data)
             sensor_data_dict = sensor_data.to_dict()
+            sensor_data_dict.update({"status_code": 200})
             self.kafka_client.send_message("sensor_data_response", sensor_data_dict)
             return sensor_data
         except SQLAlchemyError as e:
