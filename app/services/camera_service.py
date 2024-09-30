@@ -49,7 +49,6 @@ class CameraService:
     def get_by_id_camera_service(self, kafka_in_dto):
         try:
             record_id = kafka_in_dto['id']
-
             camera = self.camera_repository.get_by_id(record_id)
             logging.info(f"Retrieved camera: {camera}")
             camera_dict = camera.to_dict() if camera else {}
