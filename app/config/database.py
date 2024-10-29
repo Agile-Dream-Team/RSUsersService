@@ -1,11 +1,10 @@
-import json
-import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.config.config import Settings
-from app.domain.sensor_data import Base
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
 
 
 class Database:

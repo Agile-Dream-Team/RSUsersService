@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  warehouse:
+  user:
     build: .
     ports:
       - "${WEBHOOK_PORT}:${WEBHOOK_PORT}"

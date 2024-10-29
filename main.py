@@ -6,13 +6,10 @@ import uvicorn
 from fastapi import FastAPI, status
 from pydantic import BaseModel, ValidationError
 
-from RSErrorHandler.ErrorHandler import RSKafkaException
 from app.config.config import Settings
 from app.config.database import setup_database
-from app.services.camera_service import CameraService
-from app.services.prediction_service import PredictionService
-from app.services.sensor_data_service import SensorDataService
 from RSKafkaWrapper.client import KafkaClient
+from app.services.user_service import UserService
 
 
 def configure_logging():
@@ -32,16 +29,8 @@ db_session = setup_database(app_settings)
 
 
 # Dependency to get the KafkaConsumerService instance
-def get_kafka_service_sensor_data():
-    return SensorDataService(kafka_client, db_session)
-
-
-def get_kafka_service_camera():
-    return CameraService(kafka_client, db_session)
-
-
-def get_kafka_service_prediction():
-    return PredictionService(kafka_client, db_session)
+def get_kafka_service_user():
+    return UserService(kafka_client, db_session)
 
 
 @asynccontextmanager
@@ -60,15 +49,12 @@ async def lifespan(fastapi_app: FastAPI):
         else:
             logging.info(f"Topic '{topic}' already exists.")
 
-    kafka_service_sensor_data = SensorDataService(kafka_client, db_session)
-    kafka_service_camera = CameraService(kafka_client, db_session)
+    kafka_service_user = UserService(kafka_client, db_session)
 
     logging.info("KafkaConsumerService initialized successfully.")
 
     # Store the service in the app's state for global access
-    fastapi_app.state.kafka_service = kafka_service_sensor_data
-    fastapi_app.state.kafka_service_camera = kafka_service_camera
-
+    fastapi_app.state.kafka_service = kafka_service_user
     yield
 
 
@@ -86,81 +72,14 @@ async def get_health() -> HealthCheck:
     return HealthCheck()
 
 
-@kafka_client.topic('get_all_sensor_data')
-def consume_message_get_all_sensor_data(msg):
+@kafka_client.topic('user_request')
+def consume_users(msg):
     try:
-        logging.info(f"Consumed message in get_all_sensor_data: {msg}")
-        kafka_service_sensor_data = get_kafka_service_sensor_data()
-        kafka_service_sensor_data.get_all_sensor_data_service(msg)
+        logging.info(f"Consumed message in user_request: {msg}")
+        kafka_service_user = get_kafka_service_user()
+        kafka_service_user.save(msg)
     except Exception as e:
-        logging.error(f"Error processing message in save sensor data: {e}")
-        raise RSKafkaException(f"Exception: {e}", kafka_client, "get_all_sensor_data_response")
-
-
-@kafka_client.topic('sensor_data')
-def consume_message_save_sensor_data(msg):
-    try:
-        logging.info(f"Consumed message in sensor_data: {msg}")
-        kafka_service_sensor_data = get_kafka_service_sensor_data()
-        kafka_service_sensor_data.save_sensor_data_service(msg)
-    except Exception as e:
-        logging.error(f"Error processing message in save sensor data: {e}")
-        raise RSKafkaException(f"Exception: {e}", kafka_client, "sensor_data_response")
-
-
-@kafka_client.topic('get_by_id_sensor_data')
-def consume_message_get_by_id_camera(msg):
-    try:
-        logging.info(f"Consumed message in get_by_id_sensor_data: {msg}")
-        kafka_service_sensor_data = get_kafka_service_sensor_data()
-        kafka_service_sensor_data.get_by_id_sensor_data_service(msg)
-    except Exception as e:
-        logging.error(f"Error processing message in get_by_id_sensor_data: {e}")
-        raise RSKafkaException(f"Exception: {e}", kafka_client, "get_by_id_sensor_data_response")
-
-
-@kafka_client.topic('camera')
-def consume_message_save_camera(msg):
-    try:
-        logging.info(f"Consumed message in camera: {msg}")
-        kafka_service_camera = get_kafka_service_camera()
-        kafka_service_camera.save_camera_service(msg)
-    except Exception as e:
-        logging.error(f"Error processing message in camera: {e}")
-        raise RSKafkaException(f"Exception: {e}", kafka_client, "camera_response")
-
-
-@kafka_client.topic('get_all_camera')
-def consume_message_get_all_camera(msg):
-    try:
-        logging.info(f"Consumed message in get_all_camera: {msg}")
-        kafka_service_image = get_kafka_service_camera()
-        kafka_service_image.get_all_camera_service(msg)
-    except Exception as e:
-        logging.error(f"Error processing message in get_all_camera: {e}")
-        raise RSKafkaException(f"Exception: {e}", kafka_client, "get_all_camera_response")
-
-
-@kafka_client.topic('get_by_id_camera')
-def consume_message_get_by_id_camera(msg):
-    try:
-        logging.info(f"Consumed message in get_by_id_camera: {msg}")
-        kafka_service_image = get_kafka_service_camera()
-        kafka_service_image.get_by_id_camera_service(msg)
-    except Exception as e:
-        logging.error(f"Error processing message in get_by_id_camera: {e}")
-        raise RSKafkaException(f"Exception: {e}", kafka_client, "get_by_id_camera_response")
-
-
-@kafka_client.topic('prediction_request')
-def consume_message_get_prediction(msg):
-    try:
-        logging.info(f"Consumed message in prediction_request: {msg}")
-        kafka_service_prediction = get_kafka_service_prediction()
-        kafka_service_prediction.get_prediction_service(msg)
-    except Exception as e:
-        logging.error(f"Error processing message in prediction_request: {e}")
-        raise RSKafkaException(f"Exception: {e}", kafka_client, "prediction_response")
+        logging.error(f"Error processing message in user_request: {e}")
 
 
 if __name__ == "__main__":
